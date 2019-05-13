@@ -17,10 +17,12 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.util.Date;
@@ -32,14 +34,15 @@ public class Lucene {
     private static final String username = "postgres";
     private static final String password = "root";
     private static final Version version = Version.LUCENE_47;
+    private static final String PATH = "/Users/obsidian/source/lucene_test/src/index";
     private Directory directory = null;
     private DirectoryReader directoryReader = null;
     private IndexWriter indexWriter = null;
     private IKAnalyzer ikAnalyzer;
     private Connection connection;
 
-    public Lucene() {
-        directory = new RAMDirectory();
+    public Lucene() throws IOException {
+        directory = FSDirectory.open(new File(PATH));
     }
 
     //    分析器
@@ -126,6 +129,7 @@ public class Lucene {
 
     //    检索
     public void searchByTerm(String field, String keyword, int num) {
+        long startTime = System.currentTimeMillis();    //获取开始时间
         IndexSearcher indexSearcher = getSearcher();
         IKAnalyzer analyzer = getAnalyzer();
         //使用QueryParser查询分析器构造Query对象
@@ -135,7 +139,8 @@ public class Lucene {
             Query query = queryParser.parse(keyword);
             ScoreDoc[] hits;
             hits = indexSearcher.search(query, num).scoreDocs;
-            System.out.println("搜索到以下内容（共" + num + "条）：");
+            long endTime = System.currentTimeMillis();
+            System.out.println("搜索到以下内容（共" + num + "条，耗时"+(endTime - startTime)+"ms）：");
             for (int i = 0; i < hits.length; i++) {
                 Document doc = indexSearcher.doc(hits[i].doc);
                 System.out.println(doc.get("news_title") + " " + doc.get("news_content") + " " + doc.get("news_url") + " " + doc.get("news_create_time"));
@@ -156,9 +161,17 @@ public class Lucene {
     }
 
     //主函数
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Lucene ld = new Lucene();
         ld.createIndex();
+    }
+}
+
+class Test {
+    public static void main(String... args) throws IOException {
+
+        Lucene ld = new Lucene();
         ld.searchByTerm("news_content", "上海大学", 10);
+
     }
 }
